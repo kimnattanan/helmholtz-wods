@@ -1,0 +1,31 @@
+#version 450
+//! Pass A stub: Walk on Stars on obstacle-touching co-edges, weight 1/J0(kr).
+//! Week 3 fills histogram SSBO. Binding layout matches proposal §5.
+
+layout(local_size_x = 64) in;
+
+layout(std140, binding = 0) uniform Frame {
+    vec2 tank_size;
+    float k;
+    float eps;
+    uint max_steps;
+    uint walks_per_bucket;
+    uint seed;
+    uint _pad;
+} frame;
+
+layout(std430, binding = 1) readonly buffer SdfNodes {
+    vec4 nodes[]; // placeholder packing
+};
+
+layout(std430, binding = 2) buffer Histogram {
+    vec2 weights[]; // complex accumulators per exit bin
+};
+
+void main() {
+    // TODO(W3): WoS × 1/J0 into Histogram for this co-edge bucket.
+    uint id = gl_GlobalInvocationID.x;
+    if (id == 0u) {
+        weights[0] = vec2(0.0);
+    }
+}

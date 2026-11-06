@@ -1,0 +1,35 @@
+[package]
+name = "helmholtz-wods"
+version = "0.1.0"
+edition = "2021"
+description = "2D Helmholtz wave height in a tank via Walk on Decomposed Subdomains (WoDS)"
+license = "MIT"
+authors = [
+    "รวินท์ โกศล <6832191421>",
+    "ณัฐนันท์ จึงธนศิริกูล <6832067321>",
+]
+default-run = "helmholtz-wods"
+
+[dependencies]
+anyhow = "1"
+ash = { version = "0.38", default-features = false, features = ["loaded", "debug", "std"] }
+ash-window = "0.13"
+bytemuck = { version = "1", features = ["derive"] }
+libm = "0.2"
+raw-window-handle = "0.6"
+winit = "0.30"
+
+[dev-dependencies]
+approx = "0.5"
+
+[[bin]]
+name = "helmholtz-wods"
+path = "src/main.rs"
+
+[[bin]]
+name = "laplace-check"
+path = "scripts/laplace_check.rs"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

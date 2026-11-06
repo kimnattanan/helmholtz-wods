@@ -1,0 +1,11 @@
+/target
+**/*.rs.bk
+.DS_Store
+*.spv
+!shaders/spv/.gitkeep
+capture/
+out/
+.idea/
+.vscode/
+*.log
+.env

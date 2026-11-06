@@ -1,0 +1,25 @@
+#version 450
+//! Week-1 smoke test: dispatch compute and fill the storage image.
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(binding = 0, rgba8) uniform writeonly image2D out_image;
+
+layout(push_constant) uniform PushConstants {
+    vec2 resolution;
+    float time;
+    float _pad;
+} pc;
+
+void main() {
+    ivec2 pix = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = ivec2(pc.resolution);
+    if (pix.x >= size.x || pix.y >= size.y) {
+        return;
+    }
+
+    vec2 uv = (vec2(pix) + 0.5) / pc.resolution;
+    float wave = 0.5 + 0.5 * sin(pc.time + uv.x * 6.2831853);
+    vec3 color = vec3(uv.x, uv.y, wave);
+    imageStore(out_image, pix, vec4(color, 1.0));
+}
