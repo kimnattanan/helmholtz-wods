@@ -1,0 +1,15 @@
+---
+description: Mandatory project brief — read LLM_CONTEXT.md before any work
+alwaysApply: true
+---
+
+# Read LLM_CONTEXT first
+
+Before answering, editing, scaffolding, or advising on this project:
+
+1. **Read** `LLM_CONTEXT.md` at the project root with the Read tool.
+2. Treat it as higher priority than chat memory.
+3. If the user request conflicts with `LLM_CONTEXT.md`, follow the file and say so.
+4. After AI-assisted code/doc changes, append a row to `AI-use-log.md`.
+
+This is the C++ project (`C++20` + `GLFW` + `Vulkan` / MoltenVK). Keep CPU algorithm maths dual with the GLSL shaders.

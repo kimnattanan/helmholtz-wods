@@ -1,0 +1,29 @@
+#version 450
+//! Pass C stub: short walks to tile boundary, assemble complex field (RG32F).
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(binding = 0, rg32f) uniform writeonly image2D field_image;
+
+layout(std140, binding = 1) uniform Frame {
+    vec2 tank_size;
+    vec2 resolution;
+    float k;
+    float phase; // unused here; Pass D owns phase
+    uint walks_per_pixel;
+    uint seed;
+} frame;
+
+layout(std430, binding = 2) readonly buffer InterfaceValues {
+    vec2 u_interface[];
+};
+
+void main() {
+    ivec2 pix = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = ivec2(frame.resolution);
+    if (pix.x >= size.x || pix.y >= size.y) {
+        return;
+    }
+    // TODO(W3): walk to co-edge, read InterfaceValues, write complex field.
+    imageStore(field_image, pix, vec4(0.0));
+}
