@@ -65,10 +65,7 @@ int main() {
   }
 
   const float rmse = hwods::relative_rmse(approx, reference);
-  std::size_t shared_empty = 0;
-  for (const auto& e : grid.co_edges) {
-    if (!e.histogram_slot) ++shared_empty;
-  }
+  std::size_t shared_empty = grid.co_edges.size() - grid.histogram_slots;
 
   std::cout << "helmholtz-wods Laplace empty-tank check\n";
   std::cout << "  max |BC − analytical|     = " << max_bdry_err << "\n";
