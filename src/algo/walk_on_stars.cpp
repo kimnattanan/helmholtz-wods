@@ -38,16 +38,14 @@ std::optional<WalkStep> walk_step(const SceneSdf& scene, std::array<float, 2> p,
 
   const SdfQuery q_to = scene.query(to, cfg.eps);
   std::optional<BoundaryKind> hit;
-  if (q_to.distance < 0.f || q_to.distance <= cfg.eps) {
-    auto [closest, kind] = scene.closest_boundary_point(to);
-    to = closest;
-    hit = kind;
-  }
-
-  if (hit == BoundaryKind::ZeroNeumann) {
-    auto [c, _] = scene.closest_boundary_point(to);
-    const auto n = scene.query(c, cfg.eps).gradient;
-    to = {c[0] + n[0] * cfg.eps * 2.f, c[1] + n[1] * cfg.eps * 2.f};
+  if (q_to.distance <= cfg.eps) {
+    to = {to[0] - q_to.gradient[0] * q_to.distance,
+          to[1] - q_to.gradient[1] * q_to.distance};
+    hit = q_to.boundary;
+    if (hit == BoundaryKind::ZeroNeumann) {
+      const auto n = q_to.gradient;
+      to = {to[0] + n[0] * cfg.eps * 2.f, to[1] + n[1] * cfg.eps * 2.f};
+    }
   }
 
   return WalkStep{p, to, radius, *weight, hit};
