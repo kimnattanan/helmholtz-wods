@@ -43,13 +43,13 @@ int main() {
     const auto grid =
         hwods::TileGrid::build({1.f, 1.f}, 4, 4, [](auto, auto) { return false; });
     expect(grid.tiles.size() == 16, "tile count");
-    expect(grid.histogram_slots() == 0, "shared empty hist");
+    expect(grid.histogram_slots == 0, "shared empty hist");
   }
   {
     const auto grid = hwods::TileGrid::build({1.f, 1.f}, 4, 4, [](auto min, auto max) {
       return min[0] >= 0.25f && max[0] <= 0.5f && min[1] >= 0.25f && max[1] <= 0.5f;
     });
-    expect(grid.histogram_slots() > 0, "obstacle hist slots");
+    expect(grid.histogram_slots > 0, "obstacle hist slots");
   }
   {
     expect(std::fabs(hwods::bessel_j0(0.f) - 1.f) < 1e-6f, "J0(0)");

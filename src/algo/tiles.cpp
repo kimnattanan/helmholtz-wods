@@ -44,7 +44,6 @@ TileGrid TileGrid::build(std::array<float, 2> tank_size, uint32_t nx, uint32_t n
     }
   }
 
-  uint32_t hist_slot = 0;
   uint32_t edge_id = 0;
 
   for (uint32_t j = 0; j < ny; ++j) {
@@ -62,7 +61,7 @@ TileGrid TileGrid::build(std::array<float, 2> tank_size, uint32_t nx, uint32_t n
       e.touches_obstacle = touches;
       if (touches) {
         e.kind = CoEdgeKind::InteriorVertical;
-        e.histogram_slot = hist_slot++;
+        e.histogram_slot = grid.histogram_slots++;
       } else {
         e.kind = CoEdgeKind::SharedEmpty;
       }
@@ -85,7 +84,7 @@ TileGrid TileGrid::build(std::array<float, 2> tank_size, uint32_t nx, uint32_t n
       e.touches_obstacle = touches;
       if (touches) {
         e.kind = CoEdgeKind::InteriorHorizontal;
-        e.histogram_slot = hist_slot++;
+        e.histogram_slot = grid.histogram_slots++;
       } else {
         e.kind = CoEdgeKind::SharedEmpty;
       }
@@ -105,18 +104,6 @@ std::optional<TileId> TileGrid::tile_index(std::array<float, 2> p) const {
   i = std::min(i, nx - 1);
   j = std::min(j, ny - 1);
   return TileId{j * nx + i};
-}
-
-uint32_t TileGrid::histogram_slots() const {
-  uint32_t max_slot = 0;
-  bool any = false;
-  for (const auto& e : co_edges) {
-    if (e.histogram_slot) {
-      any = true;
-      max_slot = std::max(max_slot, *e.histogram_slot);
-    }
-  }
-  return any ? max_slot + 1 : 0;
 }
 
 }  // namespace hwods

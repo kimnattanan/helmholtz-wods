@@ -43,6 +43,7 @@ struct TileGrid {
   uint32_t ny = 1;
   std::vector<Tile> tiles;
   std::vector<CoEdge> co_edges;
+  uint32_t histogram_slots = 0;
 
   using ObstacleHitFn =
       std::function<bool(std::array<float, 2> min, std::array<float, 2> max)>;
@@ -51,7 +52,6 @@ struct TileGrid {
                         ObstacleHitFn obstacle_hit);
 
   std::optional<TileId> tile_index(std::array<float, 2> p) const;
-  uint32_t histogram_slots() const;
 };
 
 }  // namespace hwods
