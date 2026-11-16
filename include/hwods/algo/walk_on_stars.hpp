@@ -31,20 +31,17 @@ struct WalkResult {
   std::array<float, 2> endpoint{0, 0};
   float total_weight = 1.f;
   std::optional<BoundaryKind> terminated_on;
-  uint32_t rejected_steps = 0;
 };
 
 struct WosEstimate {
   Complex32 value{0.f, 0.f};
   uint32_t walks_completed = 0;
-  uint32_t rejected_steps = 0;
 };
 
 std::array<float, 2> sample_direction(uint32_t& seed);
 
 std::optional<WalkStep> walk_step(const SceneSdf& scene, std::array<float, 2> p,
-                                  const WalkConfig& cfg, uint32_t& seed,
-                                  uint32_t& rejected_steps);
+                                  const WalkConfig& cfg, uint32_t& seed);
 
 WalkResult walk_until_boundary(const SceneSdf& scene, std::array<float, 2> p,
                                const WalkConfig& cfg, uint32_t& seed);

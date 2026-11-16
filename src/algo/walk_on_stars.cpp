@@ -24,8 +24,7 @@ std::array<float, 2> sample_direction(uint32_t& seed) {
 }
 
 std::optional<WalkStep> walk_step(const SceneSdf& scene, std::array<float, 2> p,
-                                  const WalkConfig& cfg, uint32_t& seed,
-                                  uint32_t& rejected_steps) {
+                                  const WalkConfig& cfg, uint32_t& seed) {
   const SdfQuery q = scene.query(p, cfg.eps);
   if (q.distance <= cfg.eps) {
     return WalkStep{p, p, 0.f, 1.f, q.boundary};
@@ -33,15 +32,6 @@ std::optional<WalkStep> walk_step(const SceneSdf& scene, std::array<float, 2> p,
 
   float radius = std::min(q.distance, cfg.radius_cap);
   auto weight = step_weight(cfg, radius);
-
-  // If near a J0 root, shrink the step radius before trusting the number
-  int retries = 0;
-  while (!weight && retries < 4 && radius > cfg.eps * 2.f) {
-    rejected_steps++;
-    radius *= 0.5f;
-    weight = step_weight(cfg, radius);
-    retries++;
-  }
 
   if (!weight) return std::nullopt;
 
@@ -63,21 +53,14 @@ std::optional<WalkStep> walk_step(const SceneSdf& scene, std::array<float, 2> p,
   return WalkStep{p, to, radius, *weight, hit};
 }
 
-std::optional<WalkStep> walk_step(const SceneSdf& scene, std::array<float, 2> p,
-                                  const WalkConfig& cfg, uint32_t& seed) {
-  uint32_t unused_rejected = 0;
-  return walk_step(scene, p, cfg, seed, unused_rejected);
-}
-
 WalkResult walk_until_boundary(const SceneSdf& scene, std::array<float, 2> p,
                                const WalkConfig& cfg, uint32_t& seed) {
   WalkResult result;
   result.endpoint = p;
   result.total_weight = 1.f;
-  result.rejected_steps = 0;
 
   for (uint32_t i = 0; i < cfg.max_steps; ++i) {
-    auto step = walk_step(scene, p, cfg, seed, result.rejected_steps);
+    const auto step = walk_step(scene, p, cfg, seed);
     if (!step) break;
     result.total_weight *= step->weight;
     p = step->to;
@@ -116,7 +99,6 @@ WosEstimate estimate_wos_at_point(const SceneSdf& scene, std::array<float, 2> p,
 
   for (uint32_t w = 0; w < walks; ++w) {
     const auto walk = walk_until_boundary(scene, p, cfg, seed);
-    est.rejected_steps += walk.rejected_steps;
     if (walk.terminated_on == BoundaryKind::Dirichlet ||
         scene.tank_wall_distance(walk.endpoint) <= cfg.eps * 2.f) {
       const float u_b =
