@@ -20,7 +20,7 @@ struct SdfNode {
   std::array<float, 2> half_extents{0, 0};  // box / rounded
   /// Column-major 2×3: x-basis, y-basis, translation.
   std::array<std::array<float, 2>, 3> transform{{{{1, 0}}, {{0, 1}}, {{0, 0}}}};
-  std::optional<SdfOp> op_with_next;
+  SdfOp op_with_next = SdfOp::Union;
 
   static SdfNode circle(std::array<float, 2> center, float r);
   static SdfNode box_centered(std::array<float, 2> center, std::array<float, 2> he);

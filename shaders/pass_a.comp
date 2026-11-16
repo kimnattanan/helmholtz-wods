@@ -11,21 +11,95 @@ layout(std140, binding = 0) uniform Frame {
     uint max_steps;
     uint walks_per_bucket;
     uint seed;
-    uint _pad;
+    uint node_count;
 } frame;
 
+struct SdfNode {
+    uint kind; // 0: circle, 1: box, 2: rounded box
+    float radius;
+    vec2 half_extents;
+    mat3x2 transform;
+    uint op_with_next; // 0: union, 1: intersection, 2: difference
+    uint _pad;
+};
+
 layout(std430, binding = 1) readonly buffer SdfNodes {
-    vec4 nodes[]; // placeholder packing
+    SdfNode nodes[]; // placeholder packing
 };
 
 layout(std430, binding = 2) buffer Histogram {
     vec2 weights[]; // complex accumulators per exit bin
 };
 
+
+vec2 world_to_local(vec2 p, mat3x2 transform) {
+    const vec2 t = transform[2];
+    const vec2 x = transform[0];
+    const vec2 y = transform[1];
+    const vec2 q = p - t;
+    const float det = x.x * y.y - x.y * y.x;
+    float inv = abs(det) < 1e-12 ? 1.0 : 1.0 / det;
+    return vec2((q.x * y.y - q.y * y.x) * inv, (-q.x * x.y + q.y * x.x) * inv);
+}
+
+float sd_box(vec2 p, vec2 half_extents) {
+    vec2 q = abs(p) - half_extents;
+    return length(max(q,0.0)) + min(max(q.x,q.y),0.0);
+}
+
+float signed_distance(vec2 p, SdfNode node) {
+    const vec2 q = world_to_local(p, node.transform);
+    switch (node.kind) {
+        case 0: // circle
+            return length(q) - node.radius;
+        case 1: // box
+            return sd_box(q, node.half_extents);
+        case 2: // rounded box
+            return sd_box(q, node.half_extents) - node.radius;
+    }
+    return 0.0;
+}
+
+float obstacle_distance(vec2 p) {
+    if (frame.node_count == 0u) return uintBitsToFloat(0x7F800000u);
+    float acc = signed_distance(p, nodes[0]);
+    for (uint i=1; i<frame.node_count; ++i) {
+        const float d = signed_distance(p, nodes[i]);
+        switch (nodes[i-1].op_with_next) {
+            case 1: // intersection
+                acc = max(acc, d);
+                break;
+            case 2: // difference
+                acc = max(acc, -d);
+                break;
+            default: // union
+                acc = min(acc, d);
+        }
+    }
+    return acc;
+}
+
+float tank_wall_distance(vec2 p) {
+    const float w = frame.tank_size[0];
+    const float h = frame.tank_size[1];
+    return min(
+        min(p.x, w - p.x),
+        min(p.y, h - p.y)
+    );
+}
+
+float domain_distance(vec2 p) {
+    return min(tank_wall_distance(p), obstacle_distance(p));
+}
+
+
 void main() {
     // TODO(W3): WoS × 1/J0 into Histogram for this co-edge bucket.
     uint id = gl_GlobalInvocationID.x;
     if (id == 0u) {
-        weights[0] = vec2(0.0);
+        weights[0] = vec2(
+            domain_distance(frame.tank_size * 0.5),
+            float(frame.node_count)
+        );
     }
 }
