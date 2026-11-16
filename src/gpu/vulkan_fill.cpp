@@ -1,4 +1,5 @@
 #include "hwods/gpu/vulkan_fill.hpp"
+#include "hwods/gpu/submit_timer.hpp"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -102,6 +103,7 @@ struct VulkanFillApp::Impl {
   std::size_t frame_index = 0;
   std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
   bool framebuffer_resized = false;
+  GpuSubmitTimer timer;
 
   explicit Impl(int width, int height) {
     if (!glfwInit()) throw std::runtime_error("glfwInit failed");
@@ -130,6 +132,7 @@ struct VulkanFillApp::Impl {
     if (device) vkDeviceWaitIdle(device);
     destroy_swapchain_resources();
     if (device) {
+      timer.destroy();
       for (auto f : in_flight) vkDestroyFence(device, f, nullptr);
       for (auto s : image_available) vkDestroySemaphore(device, s, nullptr);
       for (auto s : render_finished) vkDestroySemaphore(device, s, nullptr);
@@ -460,6 +463,7 @@ struct VulkanFillApp::Impl {
       vkCreateSemaphore(device, &sci, nullptr, &render_finished[i]);
       vkCreateFence(device, &fci, nullptr, &in_flight[i]);
     }
+    timer.init(device, physical, queue_family, frames * 2);
   }
 
   void destroy_swapchain_resources() {
@@ -544,7 +548,10 @@ struct VulkanFillApp::Impl {
                             &descriptor_set, 0, nullptr);
     vkCmdPushConstants(cmd, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(push),
                        &push);
+    const uint32_t query = static_cast<uint32_t>(fi) * 2;
+    timer.mark_begin(cmd, query);
     vkCmdDispatch(cmd, (extent.width + 7) / 8, (extent.height + 7) / 8, 1);
+    timer.mark_end(cmd, query);
 
     image_barrier(cmd, storage_image, VK_IMAGE_LAYOUT_GENERAL,
                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_SHADER_WRITE_BIT,
@@ -580,9 +587,14 @@ struct VulkanFillApp::Impl {
     submit.pCommandBuffers = &cmd;
     submit.signalSemaphoreCount = 1;
     submit.pSignalSemaphores = &render_finished[fi];
+    const auto submitted = std::chrono::steady_clock::now();
     if (vkQueueSubmit(queue, 1, &submit, in_flight[fi]) != VK_SUCCESS) {
       throw std::runtime_error("queue submit failed");
     }
+    if (vkWaitForFences(device, 1, &in_flight[fi], VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
+      throw std::runtime_error("fill fence wait failed");
+    }
+    timer.report("fill", static_cast<uint32_t>(fi) * 2, submitted);
 
     VkPresentInfoKHR present{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
     present.waitSemaphoreCount = 1;

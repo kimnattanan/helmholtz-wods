@@ -56,9 +56,11 @@ endif()
 # --- GPU (GLFW + Vulkan compute fill) ----------------------------------------
 add_library(hwods_gpu
   src/gpu/vulkan_fill.cpp
+  src/gpu/vulkan_pass_a.cpp
+  src/gpu/submit_timer.cpp
 )
 target_include_directories(hwods_gpu PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(hwods_gpu PUBLIC Vulkan::Vulkan glfw)
+target_link_libraries(hwods_gpu PUBLIC Vulkan::Vulkan glfw hwods_core)
 target_compile_definitions(hwods_gpu PUBLIC
   HWODS_SHADER_DIR="${SHADER_SPV_DIR}"
 )

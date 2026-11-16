@@ -19,22 +19,18 @@ std::optional<float> combine_nodes(const std::vector<SdfNode>& nodes,
                                    std::array<float, 2> p) {
   if (nodes.empty()) return std::nullopt;
   float acc = nodes[0].signed_distance(p);
-  std::optional<SdfOp> pending = nodes[0].op_with_next;
   for (std::size_t i = 1; i < nodes.size(); ++i) {
     const float d = nodes[i].signed_distance(p);
-    const SdfOp op = pending.value_or(SdfOp::Union);
-    switch (op) {
-      case SdfOp::Union:
-        acc = std::min(acc, d);
-        break;
+    switch (nodes[i-1].op_with_next) {
       case SdfOp::Intersection:
         acc = std::max(acc, d);
         break;
       case SdfOp::Difference:
         acc = std::max(acc, -d);
         break;
+      default: // Union
+        acc = std::min(acc, d);
     }
-    pending = nodes[i].op_with_next;
   }
   return acc;
 }
