@@ -2,6 +2,7 @@
 #include "hwods/algo/tiles.hpp"
 #include "hwods/algo/walk_on_stars.hpp"
 #include "hwods/algo/weight.hpp"
+#include "hwods/eval/fdm.hpp"
 #include "hwods/eval/laplace.hpp"
 #include "hwods/eval/rmse.hpp"
 
@@ -75,6 +76,44 @@ int main() {
   {
     const std::vector<float> a{1.f, 2.f, 3.f};
     expect(hwods::relative_rmse(a, a) < 1e-7f, "rmse identical");
+  }
+  {
+    auto grid = hwods::FdmGrid::zeros(32, 32, {1.f, 1.f}, 0.f);
+    hwods::solve_helmholtz_fdm(grid);
+    std::vector<float> approx;
+    std::vector<float> ref;
+    approx.reserve(grid.nx * grid.ny);
+    ref.reserve(grid.nx * grid.ny);
+    for (std::size_t j = 0; j < grid.ny; ++j) {
+      for (std::size_t i = 0; i < grid.nx; ++i) {
+        const float x = (static_cast<float>(i) + 0.5f) / static_cast<float>(grid.nx);
+        const float y = (static_cast<float>(j) + 0.5f) / static_cast<float>(grid.ny);
+        approx.push_back(grid.values[grid.idx(i, j)].re);
+        ref.push_back(hwods::analytical_laplace_empty_tank(x, y, 1.f));
+      }
+    }
+    const float rmse = hwods::relative_rmse(approx, ref);
+    expect(rmse < 0.01f, "FDM k=0 matches analytical laplace <= 1%");
+  }
+  {
+    const auto scene = hwods::make_circle_box_oracle_scene(1.f, 1.f);
+    expect(scene.obstacles.size() == 2, "oracle scene has circle and box");
+    expect(scene.obstacle_distance({0.35f, 0.50f}) <= 0.f, "inside circle");
+    expect(scene.obstacle_distance({0.68f, 0.42f}) <= 0.f, "inside box");
+    expect(scene.obstacle_distance({0.10f, 0.10f}) > 0.f, "outside in water");
+
+    hwods::WalkConfig cfg;
+    cfg.k = 1.0f;
+    cfg.helmholtz = true;
+    cfg.max_steps = 32;
+    cfg.radius_cap = 0.2f;
+    uint32_t seed = 42;
+
+    const auto est_inside = hwods::estimate_wos_at_point(scene, {0.35f, 0.50f}, cfg, 64, seed);
+    expect(est_inside.value.re == 0.f, "WoS inside obstacle is 0");
+
+    const auto est_water = hwods::estimate_wos_at_point(scene, {0.10f, 0.50f}, cfg, 64, seed);
+    expect(est_water.value.re > 0.5f && est_water.value.re < 1.1f, "WoS near left wall ~0.9");
   }
 
   if (fails) {

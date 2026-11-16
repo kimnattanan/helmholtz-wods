@@ -8,14 +8,17 @@
 #include <iostream>
 #include <vector>
 
-int main() {
+int main()
+{
   const std::array<float, 2> tank{1.f, 1.f};
   constexpr std::size_t nx = 32;
   constexpr std::size_t ny = 32;
 
   float max_bdry_err = 0.f;
-  for (float y : {0.f, 1.f}) {
-    for (int i = 0; i <= 64; ++i) {
+  for (float y : {0.f, 1.f})
+  {
+    for (int i = 0; i <= 64; ++i)
+    {
       const float x = static_cast<float>(i) / 64.f;
       max_bdry_err = std::max(
           max_bdry_err,
@@ -23,8 +26,10 @@ int main() {
                     hwods::analytical_laplace_empty_tank(x, y, tank[0])));
     }
   }
-  for (float x : {0.f, 1.f}) {
-    for (int j = 0; j <= 64; ++j) {
+  for (float x : {0.f, 1.f})
+  {
+    for (int j = 0; j <= 64; ++j)
+    {
       const float y = static_cast<float>(j) / 64.f;
       max_bdry_err = std::max(
           max_bdry_err,
@@ -34,7 +39,8 @@ int main() {
   }
 
   const auto scene = hwods::SceneSdf::empty_tank(tank[0], tank[1]);
-  const auto grid = hwods::TileGrid::build(tank, 8, 8, [](auto, auto) { return false; });
+  const auto grid = hwods::TileGrid::build(tank, 8, 8, [](auto, auto)
+                                           { return false; });
 
   hwods::WalkConfig cfg;
   cfg.max_steps = 48;
@@ -43,17 +49,20 @@ int main() {
 
   std::vector<float> approx;
   std::vector<float> reference;
-  constexpr uint32_t walks_per_point = 64;
+  constexpr uint32_t walks_per_point = 4096;
   uint32_t seed = 42;
 
   approx.reserve(nx * ny);
   reference.reserve(nx * ny);
-  for (std::size_t j = 0; j < ny; ++j) {
-    for (std::size_t i = 0; i < nx; ++i) {
+  for (std::size_t j = 0; j < ny; ++j)
+  {
+    for (std::size_t i = 0; i < nx; ++i)
+    {
       const float x = (static_cast<float>(i) + 0.5f) / static_cast<float>(nx) * tank[0];
       const float y = (static_cast<float>(j) + 0.5f) / static_cast<float>(ny) * tank[1];
       float acc = 0.f;
-      for (uint32_t w = 0; w < walks_per_point; ++w) {
+      for (uint32_t w = 0; w < walks_per_point; ++w)
+      {
         const auto walk = hwods::walk_until_boundary(scene, {x, y}, cfg, seed);
         const float u_b =
             hwods::dirichlet_on_boundary(walk.endpoint[0], walk.endpoint[1], tank[0]);
@@ -65,6 +74,12 @@ int main() {
   }
 
   const float rmse = hwods::relative_rmse(approx, reference);
+  if (rmse > 0.01f)
+  {
+    std::cerr << "FAIL: WoS relative RMSE " << rmse << " exceeds 1% gate (0.01)\n";
+    return 1;
+  }
+
   std::size_t shared_empty = grid.co_edges.size() - grid.histogram_slots;
 
   std::cout << "helmholtz-wods Laplace empty-tank check\n";
@@ -74,10 +89,12 @@ int main() {
   std::cout << "  tiles " << grid.nx << "×" << grid.ny << "  shared-empty co-edges "
             << shared_empty << "\n";
 
-  if (max_bdry_err > 1e-5f) {
+  if (max_bdry_err > 1e-5f)
+  {
     std::cerr << "FAIL: boundary does not match analytical\n";
     return 1;
   }
+
   std::cout << "OK: analytical Laplace identity holds; WoS estimate printed for W2 tuning\n";
   return 0;
 }

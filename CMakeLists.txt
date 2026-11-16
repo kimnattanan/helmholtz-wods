@@ -73,9 +73,12 @@ target_link_libraries(helmholtz-wods PRIVATE hwods_gpu hwods_core)
 add_executable(laplace-check scripts/laplace_check.cpp)
 target_link_libraries(laplace-check PRIVATE hwods_core)
 
+add_executable(helmholtz-check scripts/helmholtz_check.cpp)
+target_link_libraries(helmholtz-check PRIVATE hwods_core)
+
 add_executable(hwods_tests tests/algo_tests.cpp)
 target_link_libraries(hwods_tests PRIVATE hwods_core)
 enable_testing()
 add_test(NAME algo_tests COMMAND hwods_tests)
 
-install(TARGETS helmholtz-wods laplace-check RUNTIME DESTINATION bin)
+install(TARGETS helmholtz-wods laplace-check helmholtz-check RUNTIME DESTINATION bin)

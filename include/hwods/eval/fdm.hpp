@@ -14,7 +14,10 @@ struct Complex32 {
   Complex32 operator+(Complex32 o) const { return {re + o.re, im + o.im}; }
   Complex32 operator-(Complex32 o) const { return {re - o.re, im - o.im}; }
   Complex32 operator*(float s) const { return {re * s, im * s}; }
+  Complex32 operator/(float s) const { return {re / s, im / s}; }
 };
+
+struct SceneSdf;
 
 struct FdmGrid {
   std::size_t nx = 0;
@@ -28,6 +31,9 @@ struct FdmGrid {
   std::size_t idx(std::size_t i, std::size_t j) const { return j * nx + i; }
 };
 
+/// Solve complex (Δ + k²)u = 0 on rectangular tank with Dirichlet outer walls
+/// and optional zero-Neumann obstacles.
+void solve_helmholtz_fdm(FdmGrid& grid, const SceneSdf* scene = nullptr);
 void solve_helmholtz_fdm_stub(FdmGrid& grid);
 
 }  // namespace hwods

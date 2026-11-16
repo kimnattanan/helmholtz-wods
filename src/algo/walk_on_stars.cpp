@@ -1,6 +1,7 @@
 #include "hwods/algo/walk_on_stars.hpp"
 
 #include "hwods/algo/weight.hpp"
+#include "hwods/eval/laplace.hpp"
 
 #include <cmath>
 #include <numbers>
@@ -23,14 +24,25 @@ std::array<float, 2> sample_direction(uint32_t& seed) {
 }
 
 std::optional<WalkStep> walk_step(const SceneSdf& scene, std::array<float, 2> p,
-                                  const WalkConfig& cfg, uint32_t& seed) {
+                                  const WalkConfig& cfg, uint32_t& seed,
+                                  uint32_t& rejected_steps) {
   const SdfQuery q = scene.query(p, cfg.eps);
   if (q.distance <= cfg.eps) {
     return WalkStep{p, p, 0.f, 1.f, q.boundary};
   }
 
-  const float radius = std::min(q.distance, cfg.radius_cap);
-  const auto weight = step_weight(cfg, radius);
+  float radius = std::min(q.distance, cfg.radius_cap);
+  auto weight = step_weight(cfg, radius);
+
+  // If near a J0 root, shrink the step radius before trusting the number
+  int retries = 0;
+  while (!weight && retries < 4 && radius > cfg.eps * 2.f) {
+    rejected_steps++;
+    radius *= 0.5f;
+    weight = step_weight(cfg, radius);
+    retries++;
+  }
+
   if (!weight) return std::nullopt;
 
   const auto dir = sample_direction(seed);
@@ -51,14 +63,21 @@ std::optional<WalkStep> walk_step(const SceneSdf& scene, std::array<float, 2> p,
   return WalkStep{p, to, radius, *weight, hit};
 }
 
+std::optional<WalkStep> walk_step(const SceneSdf& scene, std::array<float, 2> p,
+                                  const WalkConfig& cfg, uint32_t& seed) {
+  uint32_t unused_rejected = 0;
+  return walk_step(scene, p, cfg, seed, unused_rejected);
+}
+
 WalkResult walk_until_boundary(const SceneSdf& scene, std::array<float, 2> p,
                                const WalkConfig& cfg, uint32_t& seed) {
   WalkResult result;
   result.endpoint = p;
   result.total_weight = 1.f;
+  result.rejected_steps = 0;
 
   for (uint32_t i = 0; i < cfg.max_steps; ++i) {
-    auto step = walk_step(scene, p, cfg, seed);
+    auto step = walk_step(scene, p, cfg, seed, result.rejected_steps);
     if (!step) break;
     result.total_weight *= step->weight;
     p = step->to;
@@ -80,6 +99,69 @@ WalkResult walk_until_boundary(const SceneSdf& scene, std::array<float, 2> p,
 
   result.endpoint = p;
   return result;
+}
+
+WosEstimate estimate_wos_at_point(const SceneSdf& scene, std::array<float, 2> p,
+                                  const WalkConfig& cfg, uint32_t walks,
+                                  uint32_t& seed) {
+  WosEstimate est;
+  if (walks == 0) return est;
+
+  if (scene.obstacle_distance(p) <= 0.f) {
+    return est;
+  }
+
+  float acc = 0.f;
+  uint32_t valid_walks = 0;
+
+  for (uint32_t w = 0; w < walks; ++w) {
+    const auto walk = walk_until_boundary(scene, p, cfg, seed);
+    est.rejected_steps += walk.rejected_steps;
+    if (walk.terminated_on == BoundaryKind::Dirichlet ||
+        scene.tank_wall_distance(walk.endpoint) <= cfg.eps * 2.f) {
+      const float u_b =
+          dirichlet_on_boundary(walk.endpoint[0], walk.endpoint[1], scene.tank_size[0]);
+      acc += walk.total_weight * u_b;
+      valid_walks++;
+    }
+  }
+
+  est.walks_completed = valid_walks;
+  if (valid_walks > 0) {
+    est.value = Complex32{acc / static_cast<float>(valid_walks), 0.f};
+  }
+  return est;
+}
+
+std::vector<Complex32> estimate_wos_field(const SceneSdf& scene,
+                                         std::size_t nx, std::size_t ny,
+                                         const WalkConfig& cfg,
+                                         uint32_t walks_per_point,
+                                         uint32_t seed) {
+  std::vector<Complex32> field;
+  field.reserve(nx * ny);
+  const float w = scene.tank_size[0];
+  const float h = scene.tank_size[1];
+  const float hx = w / static_cast<float>(nx);
+  const float hy = h / static_cast<float>(ny);
+
+  for (std::size_t j = 0; j < ny; ++j) {
+    const float y = (static_cast<float>(j) + 0.5f) * hy;
+    for (std::size_t i = 0; i < nx; ++i) {
+      const float x = (static_cast<float>(i) + 0.5f) * hx;
+      const auto est = estimate_wos_at_point(scene, {x, y}, cfg, walks_per_point, seed);
+      field.push_back(est.value);
+    }
+  }
+  return field;
+}
+
+SceneSdf make_circle_box_oracle_scene(float width, float height) {
+  SceneSdf scene = SceneSdf::empty_tank(width, height);
+  scene.obstacles.push_back(SdfNode::circle({0.35f * width, 0.50f * height}, 0.12f * width));
+  scene.obstacles.push_back(
+      SdfNode::box_centered({0.68f * width, 0.42f * height}, {0.10f * width, 0.07f * height}));
+  return scene;
 }
 
 }  // namespace hwods
