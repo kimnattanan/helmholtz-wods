@@ -24,6 +24,7 @@ struct SdfNode {
 
   static SdfNode circle(std::array<float, 2> center, float r);
   static SdfNode box_centered(std::array<float, 2> center, std::array<float, 2> he);
+  static SdfNode rounded_box_centered(std::array<float, 2> center, std::array<float, 2> he, float radius);
   float signed_distance(std::array<float, 2> p) const;
 
  private:
@@ -50,5 +51,7 @@ struct SceneSdf {
 };
 
 float star_radius(float domain_dist, float tile_half_diag);
+
+SceneSdf make_example_scene(float width, float height);
 
 }  // namespace hwods

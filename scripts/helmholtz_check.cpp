@@ -17,12 +17,12 @@ int main() {
   constexpr uint32_t walks_per_point = 256;
   uint32_t seed = 42;
 
-  const auto scene = hwods::make_circle_box_oracle_scene(tank[0], tank[1]);
+  const auto scene = hwods::make_example_scene(tank[0], tank[1]);
 
   std::cout << "=== Helmholtz Walk on Stars vs FDM Check ===\n";
   std::cout << "Tank: " << tank[0] << "x" << tank[1] << ", k=" << k << "\n";
   std::cout << "Grid: " << nx << "x" << ny << " (" << walks_per_point << " walks/point)\n";
-  std::cout << "Obstacles: Circle at (0.35, 0.50) r=0.12 | Box at (0.68, 0.42) he=(0.10, 0.07)\n\n";
+  std::cout << "Obstacles: " << scene.obstacles.size() << " obstacles\n\n";
 
   // 1. Solve FDM Ground Truth
   std::cout << "1. Solving 2D Helmholtz FDM reference... " << std::flush;
@@ -73,17 +73,17 @@ int main() {
   std::vector<std::array<float, 2>> boundary_samples;
 
   // Obstacle 1: Circle boundary points
-  const std::array<float, 2> circle_c{0.35f, 0.50f};
+  const std::array<float, 2> circle_c{0.3f, 0.5f};
   const float circle_r = 0.12f;
-  for (int s = 0; s < 32; ++s) {
+  for (int s = 0; s < 16; ++s) {
     const float theta = 2.f * 3.14159265f * static_cast<float>(s) / 32.f;
     boundary_samples.push_back({circle_c[0] + circle_r * std::cos(theta),
                                 circle_c[1] + circle_r * std::sin(theta)});
   }
 
   // Obstacle 2: Box boundary points
-  const std::array<float, 2> box_c{0.68f, 0.42f};
-  const std::array<float, 2> box_he{0.10f, 0.07f};
+  const std::array<float, 2> box_c{0.8f, 0.72f};
+  const std::array<float, 2> box_he{0.1f, 0.07f};
   for (int s = 0; s < 8; ++s) {
     const float t = (static_cast<float>(s) + 0.5f) / 8.f;
     const float x = box_c[0] - box_he[0] + 2.f * box_he[0] * t;

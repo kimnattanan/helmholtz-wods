@@ -6,6 +6,7 @@
 #include "hwods/eval/laplace.hpp"
 #include "hwods/eval/rmse.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
@@ -96,11 +97,23 @@ int main() {
     expect(rmse < 0.01f, "FDM k=0 matches analytical laplace <= 1%");
   }
   {
-    const auto scene = hwods::make_circle_box_oracle_scene(1.f, 1.f);
-    expect(scene.obstacles.size() == 2, "oracle scene has circle and box");
-    expect(scene.obstacle_distance({0.35f, 0.50f}) <= 0.f, "inside circle");
-    expect(scene.obstacle_distance({0.68f, 0.42f}) <= 0.f, "inside box");
-    expect(scene.obstacle_distance({0.10f, 0.10f}) > 0.f, "outside in water");
+    const auto scene = hwods::make_example_scene(1.f, 1.f);
+    auto grid = hwods::FdmGrid::zeros(32, 32, {1.f, 1.f}, 2.f);
+    hwods::solve_helmholtz_fdm(grid, &scene);
+    float max_abs = 0.f;
+    for (const auto& v : grid.values) {
+      max_abs = std::max(max_abs, std::fabs(v.re));
+      max_abs = std::max(max_abs, std::fabs(v.im));
+    }
+    expect(max_abs < 10.f, "FDM example scene stays bounded");
+    const float hx = 1.f / 32.f;
+    const float x = (9.f + 0.5f) * hx;
+    const float y = (17.f + 0.5f) * hx;
+    expect(scene.obstacle_distance({x, y}) > 0.f, "example hole is water");
+    expect(std::fabs(grid.values[grid.idx(9, 17)].re) < 1e-4f, "FDM hole cell is 0");
+  }
+  {
+    const auto scene = hwods::make_example_scene(1.f, 1.f);
 
     hwods::WalkConfig cfg;
     cfg.k = 1.0f;
@@ -109,7 +122,7 @@ int main() {
     cfg.radius_cap = 0.2f;
     uint32_t seed = 42;
 
-    const auto est_inside = hwods::estimate_wos_at_point(scene, {0.35f, 0.50f}, cfg, 64, seed);
+    const auto est_inside = hwods::estimate_wos_at_point(scene, {0.25f, 0.55f}, cfg, 64, seed);
     expect(est_inside.value.re == 0.f, "WoS inside obstacle is 0");
 
     const auto est_water = hwods::estimate_wos_at_point(scene, {0.10f, 0.50f}, cfg, 64, seed);

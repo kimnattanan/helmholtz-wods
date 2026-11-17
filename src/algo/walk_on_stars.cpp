@@ -1,5 +1,6 @@
 #include "hwods/algo/walk_on_stars.hpp"
 
+#include "hwods/algo/sdf.hpp"
 #include "hwods/algo/weight.hpp"
 #include "hwods/eval/laplace.hpp"
 
@@ -136,14 +137,6 @@ std::vector<Complex32> estimate_wos_field(const SceneSdf& scene,
     }
   }
   return field;
-}
-
-SceneSdf make_circle_box_oracle_scene(float width, float height) {
-  SceneSdf scene = SceneSdf::empty_tank(width, height);
-  scene.obstacles.push_back(SdfNode::circle({0.35f * width, 0.50f * height}, 0.12f * width));
-  scene.obstacles.push_back(
-      SdfNode::box_centered({0.68f * width, 0.42f * height}, {0.10f * width, 0.07f * height}));
-  return scene;
 }
 
 }  // namespace hwods

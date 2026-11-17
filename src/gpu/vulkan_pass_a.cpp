@@ -1,4 +1,5 @@
 #include "hwods/gpu/vulkan_pass_a.hpp"
+#include "hwods/algo/sdf.hpp"
 #include "hwods/gpu/submit_timer.hpp"
 
 #include <vulkan/vulkan.h>
@@ -490,7 +491,6 @@ std::vector<SdfNode> demo_pass_a_nodes() {
 }
 
 PassABin run_pass_a_demo() {
-  const std::vector<SdfNode> nodes = demo_pass_a_nodes();
   PassAParams params;
   params.tank_size = {1.f, 1.f};
   params.k = 0.f;
@@ -499,16 +499,15 @@ PassABin run_pass_a_demo() {
   params.walks_per_bucket = 64;
   params.seed = 1;
 
+  SceneSdf scene = make_example_scene(params.tank_size[0], params.tank_size[1]);
+
   VulkanPassA pass;
-  const std::vector<PassABin> bins = pass.dispatch(params, nodes, 1);
+  const std::vector<PassABin> bins = pass.dispatch(params, scene.obstacles, 1);
   if (bins.size() != 1) throw std::runtime_error("Pass A returned no histogram bin");
 
-  SceneSdf scene;
-  scene.tank_size = params.tank_size;
-  scene.obstacles = nodes;
   const std::array<float, 2> center{params.tank_size[0] * 0.5f, params.tank_size[1] * 0.5f};
   const float expected_distance = scene.domain_distance(center);
-  const float expected_count = static_cast<float>(nodes.size());
+  const float expected_count = static_cast<float>(scene.obstacles.size());
   if (std::fabs(bins[0].re - expected_distance) > 1e-4f ||
       std::fabs(bins[0].im - expected_count) > 1e-4f) {
     throw std::runtime_error(

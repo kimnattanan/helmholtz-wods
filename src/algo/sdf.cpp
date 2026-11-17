@@ -53,6 +53,14 @@ SdfNode SdfNode::box_centered(std::array<float, 2> center, std::array<float, 2> 
   return n;
 }
 
+SdfNode SdfNode::rounded_box_centered(std::array<float, 2> center, std::array<float, 2> he, float radius) {
+  SdfNode n;
+  n.kind = SdfPrimitiveKind::RoundedBox;
+  n.radius = radius;
+  n.half_extents = he;
+  n.transform[2] = center;
+  return n;
+}
 std::array<float, 2> SdfNode::world_to_local(std::array<float, 2> p) const {
   const auto& t = transform[2];
   const auto& x = transform[0];
@@ -130,6 +138,25 @@ std::pair<std::array<float, 2>, BoundaryKind> SceneSdf::closest_boundary_point(
 float star_radius(float domain_dist, float tile_half_diag) {
   constexpr float kSqrt2 = 1.41421356237f;
   return std::min({std::max(domain_dist, 0.f), tile_half_diag, kSqrt2});
+}
+
+SceneSdf make_example_scene(float width, float height) {
+  std::vector<SdfNode> obstacles;
+  obstacles.push_back(SdfNode::box_centered({0.8f, 0.72f}, {0.1f, 0.07f}));
+  obstacles.back().op_with_next = SdfOp::Union;
+  obstacles.push_back(SdfNode::rounded_box_centered({0.7f, 0.12f}, {0.08f, 0.05}, 0.03f));
+  obstacles.back().op_with_next = SdfOp::Union;
+  obstacles.push_back(SdfNode::circle({0.3f, 0.5f}, 0.12f));
+  obstacles.back().op_with_next = SdfOp::Difference;
+  obstacles.push_back(SdfNode::box_centered({0.3f, 0.55f}, {0.02f, 0.03f}));
+  obstacles.back().op_with_next = SdfOp::Intersection;
+  obstacles.push_back(SdfNode::box_centered({0.3f, 0.57f}, {0.2f, 0.15f}));
+  obstacles.back().op_with_next = SdfOp::Union;
+
+  return SceneSdf{
+    .tank_size = {width, height},
+    .obstacles = obstacles
+  };
 }
 
 }  // namespace hwods

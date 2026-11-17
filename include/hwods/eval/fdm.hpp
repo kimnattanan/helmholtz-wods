@@ -34,6 +34,5 @@ struct FdmGrid {
 /// Solve complex (Δ + k²)u = 0 on rectangular tank with Dirichlet outer walls
 /// and optional zero-Neumann obstacles.
 void solve_helmholtz_fdm(FdmGrid& grid, const SceneSdf* scene = nullptr);
-void solve_helmholtz_fdm_stub(FdmGrid& grid);
 
 }  // namespace hwods

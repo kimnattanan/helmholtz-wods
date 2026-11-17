@@ -58,7 +58,4 @@ std::vector<Complex32> estimate_wos_field(const SceneSdf& scene,
                                          uint32_t walks_per_point,
                                          uint32_t seed);
 
-/// Circle + Box oracle scene for Week 2 evaluation and Week 3 GPU matching.
-SceneSdf make_circle_box_oracle_scene(float width = 1.f, float height = 1.f);
-
 }  // namespace hwods
