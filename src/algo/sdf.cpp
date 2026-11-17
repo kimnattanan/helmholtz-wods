@@ -159,4 +159,17 @@ SceneSdf make_example_scene(float width, float height) {
   };
 }
 
+SceneSdf make_circle_box_scene(float width, float height) {
+  std::vector<SdfNode> obstacles;
+  obstacles.push_back(SdfNode::box_centered({0.8f, 0.72f}, {0.1f, 0.07f}));
+  obstacles.back().op_with_next = SdfOp::Union;
+  obstacles.push_back(SdfNode::circle({0.3f, 0.5f}, 0.12f));
+  obstacles.back().op_with_next = SdfOp::Union;
+
+  return SceneSdf{
+    .tank_size = {width, height},
+    .obstacles = obstacles
+  };
+}
+
 }  // namespace hwods

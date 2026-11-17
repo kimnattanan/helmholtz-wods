@@ -53,5 +53,6 @@ struct SceneSdf {
 float star_radius(float domain_dist, float tile_half_diag);
 
 SceneSdf make_example_scene(float width, float height);
+SceneSdf make_circle_box_scene(float width, float height);
 
 }  // namespace hwods

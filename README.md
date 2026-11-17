@@ -18,13 +18,19 @@ Paper: Jambon et al., SIGGRAPH 2026 — [doi:10.1145/3811340](https://doi.org/10
 ```bash
 brew install molten-vk vulkan-loader vulkan-headers glslang glfw
 
-cd term/projects/helmholtz-wods
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_PREFIX_PATH="$(brew --prefix)"
 cmake --build build -j
+
 ctest --test-dir build --output-on-failure
+
 ./build/laplace-check
+
+./build/helmholtz-check
+
 VK_ICD_FILENAMES=/opt/homebrew/etc/vulkan/icd.d/MoltenVK_icd.json ./build/helmholtz-wods
+
+VK_ICD_FILENAMES=/opt/homebrew/etc/vulkan/icd.d/MoltenVK_icd.json ./build/helmholtz-wods --pass-a
 ```
 
 ## Layout
