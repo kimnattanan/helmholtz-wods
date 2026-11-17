@@ -22,7 +22,7 @@ int main() {
   std::cout << "=== Helmholtz Walk on Stars vs FDM Check ===\n";
   std::cout << "Tank: " << tank[0] << "x" << tank[1] << ", k=" << k << "\n";
   std::cout << "Grid: " << nx << "x" << ny << " (" << walks_per_point << " walks/point)\n";
-  std::cout << "Obstacles: " << scene.obstacles.size() << " obstacles\n\n";
+  std::cout << "SDF nodes: " << scene.obstacles.size() << "\n\n";
 
   // 1. Solve FDM Ground Truth
   std::cout << "1. Solving 2D Helmholtz FDM reference... " << std::flush;
@@ -69,29 +69,70 @@ int main() {
 
   const float rmse = hwods::relative_rmse_complex(wos_water, fdm_water);
 
-  // 4. Sample normal derivatives along obstacle boundaries (Circle + Box)
+  // 4. Normal derivatives on the example scene: bitten circle, box, rounded box.
   std::vector<std::array<float, 2>> boundary_samples;
 
-  // Obstacle 1: Circle boundary points
   const std::array<float, 2> circle_c{0.3f, 0.5f};
-  const float circle_r = 0.12f;
-  for (int s = 0; s < 16; ++s) {
-    const float theta = 2.f * 3.14159265f * static_cast<float>(s) / 32.f;
+  constexpr float circle_r = 0.12f;
+  const std::array<float, 2> cutter_c{0.12f, 0.32f};
+  constexpr float cutter_r = 0.2f;
+  constexpr float pi = 3.14159265f;
+  const float cdx = cutter_c[0] - circle_c[0];
+  const float cdy = cutter_c[1] - circle_c[1];
+  const float center_dist = std::hypot(cdx, cdy);
+  const float toward_cutter = std::atan2(cdy, cdx);
+  const float chord_from_circle =
+      (center_dist * center_dist + circle_r * circle_r - cutter_r * cutter_r) /
+      (2.f * center_dist);
+  const float alpha = std::acos(chord_from_circle / circle_r);
+  const float arc0 = toward_cutter + alpha;
+  const float arc1 = toward_cutter - alpha + 2.f * pi;
+  for (int s = 0; s < 12; ++s) {
+    const float t = (static_cast<float>(s) + 0.5f) / 12.f;
+    const float theta = arc0 + (arc1 - arc0) * t;
     boundary_samples.push_back({circle_c[0] + circle_r * std::cos(theta),
                                 circle_c[1] + circle_r * std::sin(theta)});
   }
 
-  // Obstacle 2: Box boundary points
+  const float chord_from_cutter =
+      (center_dist * center_dist + cutter_r * cutter_r - circle_r * circle_r) /
+      (2.f * center_dist);
+  const float beta = std::acos(chord_from_cutter / cutter_r);
+  const float toward_circle = std::atan2(-cdy, -cdx);
+  const float bite0 = toward_circle - beta;
+  const float bite1 = toward_circle + beta;
+  for (int s = 0; s < 8; ++s) {
+    const float t = (static_cast<float>(s) + 0.5f) / 8.f;
+    const float theta = bite0 + (bite1 - bite0) * t;
+    boundary_samples.push_back({cutter_c[0] + cutter_r * std::cos(theta),
+                                cutter_c[1] + cutter_r * std::sin(theta)});
+  }
+
   const std::array<float, 2> box_c{0.8f, 0.72f};
   const std::array<float, 2> box_he{0.1f, 0.07f};
   for (int s = 0; s < 8; ++s) {
     const float t = (static_cast<float>(s) + 0.5f) / 8.f;
     const float x = box_c[0] - box_he[0] + 2.f * box_he[0] * t;
     const float y = box_c[1] - box_he[1] + 2.f * box_he[1] * t;
-    boundary_samples.push_back({x, box_c[1] - box_he[1]}); // bottom edge
-    boundary_samples.push_back({x, box_c[1] + box_he[1]}); // top edge
-    boundary_samples.push_back({box_c[0] - box_he[0], y}); // left edge
-    boundary_samples.push_back({box_c[0] + box_he[0], y}); // right edge
+    boundary_samples.push_back({x, box_c[1] - box_he[1]});
+    boundary_samples.push_back({x, box_c[1] + box_he[1]});
+    boundary_samples.push_back({box_c[0] - box_he[0], y});
+    boundary_samples.push_back({box_c[0] + box_he[0], y});
+  }
+
+  const std::array<float, 2> round_c{0.7f, 0.12f};
+  const std::array<float, 2> round_he{0.08f, 0.05f};
+  constexpr float round_r = 0.03f;
+  const float outer_x = round_he[0] + round_r;
+  const float outer_y = round_he[1] + round_r;
+  for (int s = 0; s < 4; ++s) {
+    const float t = (static_cast<float>(s) + 0.5f) / 4.f;
+    const float x = round_c[0] - round_he[0] + 2.f * round_he[0] * t;
+    const float y = round_c[1] - round_he[1] + 2.f * round_he[1] * t;
+    boundary_samples.push_back({x, round_c[1] - outer_y});
+    boundary_samples.push_back({x, round_c[1] + outer_y});
+    boundary_samples.push_back({round_c[0] - outer_x, y});
+    boundary_samples.push_back({round_c[0] + outer_x, y});
   }
 
   constexpr float delta = 0.015f;

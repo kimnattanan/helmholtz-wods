@@ -106,11 +106,16 @@ int main() {
       max_abs = std::max(max_abs, std::fabs(v.im));
     }
     expect(max_abs < 10.f, "FDM example scene stays bounded");
+    expect(scene.obstacle_distance({0.3f, 0.5f}) < 0.f, "bitten circle interior is solid");
+    expect(scene.obstacle_distance({0.8f, 0.72f}) < 0.f, "box interior is solid");
+    expect(scene.obstacle_distance({0.7f, 0.12f}) < 0.f, "rounded box interior is solid");
+    // Inside the small circle and inside the cutter: the bite opens to the tank.
+    expect(scene.obstacle_distance({0.24f, 0.44f}) > 0.f, "circle bite is open water");
     const float hx = 1.f / 32.f;
     const float x = (9.f + 0.5f) * hx;
-    const float y = (17.f + 0.5f) * hx;
-    expect(scene.obstacle_distance({x, y}) > 0.f, "example hole is water");
-    expect(std::fabs(grid.values[grid.idx(9, 17)].re) < 1e-4f, "FDM hole cell is 0");
+    const float y = (15.f + 0.5f) * hx;
+    expect(scene.obstacle_distance({x, y}) < 0.f, "solid cell inside bitten circle");
+    expect(std::fabs(grid.values[grid.idx(9, 15)].re) < 1e-4f, "FDM solid cell is 0");
   }
   {
     const auto scene = hwods::make_example_scene(1.f, 1.f);
